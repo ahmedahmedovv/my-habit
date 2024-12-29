@@ -56,28 +56,42 @@ function adjustTimer(index, seconds, event) {
 }
 
 // Update the sound initialization
-const timerEndSound = new Audio('./sounds/timer-end.mp3');
+let timerEndSound = null;
 
 // Modify the preloadSound function
 function preloadSound() {
+    // Only create audio instance if it doesn't exist
+    if (!timerEndSound) {
+        timerEndSound = new Audio();
+        timerEndSound.src = './sounds/timer-end.mp3';
+    }
+
     // Create a user interaction promise
-    let userInteractionPromise = new Promise((resolve) => {
-        document.addEventListener('click', function initSound() {
-            document.removeEventListener('click', initSound);
-            resolve();
-        }, { once: true });
+    return new Promise((resolve) => {
+        // Function to initialize audio
+        const initAudio = () => {
+            // iOS specific setup
+            timerEndSound.load();
+            timerEndSound.play().then(() => {
+                timerEndSound.pause();
+                timerEndSound.currentTime = 0;
+                resolve();
+            }).catch(error => {
+                console.log('Audio setup error:', error);
+                resolve(); // Resolve anyway to not block the app
+            });
+        };
+
+        // Try to init on first user interaction
+        const handleInteraction = () => {
+            document.removeEventListener('touchstart', handleInteraction);
+            document.removeEventListener('click', handleInteraction);
+            initAudio();
+        };
+
+        document.addEventListener('touchstart', handleInteraction);
+        document.addEventListener('click', handleInteraction);
     });
-
-    // Load the sound file
-    timerEndSound.load();
-
-    // Wait for both user interaction and sound loading
-    return Promise.all([
-        userInteractionPromise,
-        new Promise((resolve) => {
-            timerEndSound.addEventListener('canplaythrough', resolve, { once: true });
-        })
-    ]).catch(error => console.log('Sound initialization error:', error));
 }
 
 // Add this function to test sound
@@ -239,26 +253,42 @@ function getTimeAgo(dateString) {
     return `${Math.floor(diffDays / 30)} months ago`;
 }
 
-// Add new function to handle sound playing
+// Update the playTimerEndSound function
 function playTimerEndSound() {
-    // Reset the sound to beginning
-    timerEndSound.currentTime = 0;
+    if (!timerEndSound) return;
     
-    // Play the sound with proper error handling
+    // iOS specific: need to load before each play
+    timerEndSound.load();
+    
     timerEndSound.play().catch(error => {
-        console.error('Initial sound play failed:', error);
-        // Retry once
-        timerEndSound.load();
-        setTimeout(() => {
-            timerEndSound.play().catch(e => 
-                console.error('Retry sound play failed:', e)
-            );
-        }, 100);
+        console.error('Sound play failed:', error);
+        // Try one more time with user interaction
+        const playButton = document.createElement('button');
+        playButton.style.display = 'none';
+        document.body.appendChild(playButton);
+        
+        playButton.addEventListener('click', () => {
+            timerEndSound.play().catch(e => console.error('Retry failed:', e));
+            playButton.remove();
+        });
+        
+        playButton.click();
     });
 }
 
 // Make sure to initialize the sound when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     loadHabits();
-    preloadSound();
+    
+    // Initialize audio on first user interaction
+    const handleFirstInteraction = () => {
+        preloadSound().then(() => {
+            console.log('Audio initialized');
+        });
+        document.removeEventListener('touchstart', handleFirstInteraction);
+        document.removeEventListener('click', handleFirstInteraction);
+    };
+    
+    document.addEventListener('touchstart', handleFirstInteraction);
+    document.addEventListener('click', handleFirstInteraction);
 });
