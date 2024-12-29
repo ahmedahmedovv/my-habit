@@ -5,7 +5,8 @@ const ASSETS_TO_CACHE = [
     '/app.js',
     '/manifest.json',
     '/icon-192x192.png',
-    '/icon-512x512.png'
+    '/icon-512x512.png',
+    '/sounds/timer-end.mp3'
 ];
 
 // Install Service Worker
