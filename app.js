@@ -33,34 +33,51 @@ function addHabit() {
 }
 
 // Toggle habit completion
-function toggleHabit(index) {
+function toggleHabit(index, event) {
+    // Prevent the checkbox from triggering a form submission
+    event.preventDefault();
+    event.stopPropagation();
+    
     habits[index].completed = !habits[index].completed;
     saveHabits();
     displayHabits();
 }
 
 // Adjust timer
-function adjustTimer(index, seconds) {
+function adjustTimer(index, seconds, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     habits[index].timer = Math.max(0, habits[index].timer + seconds);
     habits[index].remainingTime = habits[index].timer;
     saveHabits();
     displayHabits();
 }
 
-// Update the sound initialization to use a relative path
-const timerEndSound = new Audio('sounds/timer-end.mp3');
+// Update the sound initialization
+const timerEndSound = new Audio('./sounds/timer-end.mp3');
 
-// Add this function to preload the sound
+// Modify the preloadSound function
 function preloadSound() {
-    timerEndSound.load();
-    // Test sound with user interaction
-    document.addEventListener('click', function initSound() {
-        timerEndSound.play().then(() => {
-            timerEndSound.pause();
-            timerEndSound.currentTime = 0;
+    // Create a user interaction promise
+    let userInteractionPromise = new Promise((resolve) => {
+        document.addEventListener('click', function initSound() {
             document.removeEventListener('click', initSound);
-        }).catch(error => console.log('Sound initialization error:', error));
-    }, { once: true });
+            resolve();
+        }, { once: true });
+    });
+
+    // Load the sound file
+    timerEndSound.load();
+
+    // Wait for both user interaction and sound loading
+    return Promise.all([
+        userInteractionPromise,
+        new Promise((resolve) => {
+            timerEndSound.addEventListener('canplaythrough', resolve, { once: true });
+        })
+    ]).catch(error => console.log('Sound initialization error:', error));
 }
 
 // Add this function to test sound
@@ -71,7 +88,11 @@ function testSound() {
 }
 
 // Toggle timer
-function toggleTimer(index) {
+function toggleTimer(index, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     const habit = habits[index];
     habit.isRunning = !habit.isRunning;
     
@@ -85,16 +106,8 @@ function toggleTimer(index) {
                 habit.isRunning = false;
                 habit.remainingTime = habit.timer;
                 
-                // Improved sound handling
-                if (timerEndSound.readyState >= 2) { // Check if sound is loaded
-                    timerEndSound.currentTime = 0; // Reset sound to start
-                    timerEndSound.play().catch(error => {
-                        console.error('Failed to play sound:', error);
-                        // Attempt to reload and play
-                        timerEndSound.load();
-                        timerEndSound.play().catch(e => console.error('Retry failed:', e));
-                    });
-                }
+                // Play sound with better error handling
+                playTimerEndSound();
                 
                 habit.completed = true;
                 saveHabits();
@@ -122,9 +135,22 @@ function displayHabits() {
     const habitList = document.getElementById('habitList');
     habitList.innerHTML = '';
     
+    if (habits.length === 0) {
+        habitList.innerHTML = `
+            <div class="text-center py-10 text-gray-500">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p class="text-lg font-medium">No habits yet</p>
+                <p class="mt-1">Add your first habit to get started!</p>
+            </div>
+        `;
+        return;
+    }
+    
     habits.forEach((habit, index) => {
         const div = document.createElement('div');
-        div.className = `habit-enter p-5 rounded-2xl border ${habit.completed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} transition-all duration-300 shadow hover:shadow-lg`;
+        div.className = `p-5 rounded-2xl border ${habit.completed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} transition-all duration-300 shadow hover:shadow-lg`;
         
         const timeAgo = getTimeAgo(habit.date);
         const minutes = Math.floor(habit.remainingTime / 60);
@@ -137,7 +163,7 @@ function displayHabits() {
                         <input type="checkbox" 
                                class="w-6 h-6 rounded-full border-2 border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
                                ${habit.completed ? 'checked' : ''} 
-                               onclick="toggleHabit(${index})">
+                               onclick="toggleHabit(${index}, event)">
                     </div>
                     <div class="flex flex-col flex-1 min-w-0 gap-1">
                         <span class="text-lg font-medium text-gray-800 leading-tight ${habit.completed ? 'line-through text-gray-500' : ''} truncate">
@@ -154,7 +180,7 @@ function displayHabits() {
                 </div>
                 <div class="flex flex-col gap-3">
                     <div class="flex items-center justify-between bg-gray-50 p-4 rounded-xl">
-                        <button onclick="adjustTimer(${index}, -5)" 
+                        <button onclick="adjustTimer(${index}, -5, event)" 
                                 class="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-lg text-xl font-medium transition-colors">
                             -
                         </button>
@@ -163,12 +189,12 @@ function displayHabits() {
                                 ${minutes}:${seconds.toString().padStart(2, '0')}
                             </span>
                         </div>
-                        <button onclick="adjustTimer(${index}, 5)" 
+                        <button onclick="adjustTimer(${index}, 5, event)" 
                                 class="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-lg text-xl font-medium transition-colors">
                             +
                         </button>
                     </div>
-                    <button onclick="toggleTimer(${index})" 
+                    <button onclick="toggleTimer(${index}, event)" 
                             class="w-full h-14 flex items-center justify-center gap-3 ${habit.isRunning ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-xl transition-all duration-200 text-base font-medium shadow-sm hover:shadow-md active:transform active:scale-98">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -181,6 +207,15 @@ function displayHabits() {
                 </div>
             </div>
         `;
+        
+        // Add click handler to the entire card (optional)
+        div.addEventListener('click', (e) => {
+            // Prevent clicking the card if clicking on buttons or checkbox
+            if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]')) {
+                toggleHabit(index, e);
+            }
+        });
+        
         habitList.appendChild(div);
     });
 }
@@ -204,8 +239,26 @@ function getTimeAgo(dateString) {
     return `${Math.floor(diffDays / 30)} months ago`;
 }
 
-// Initialize app
-loadHabits();
+// Add new function to handle sound playing
+function playTimerEndSound() {
+    // Reset the sound to beginning
+    timerEndSound.currentTime = 0;
+    
+    // Play the sound with proper error handling
+    timerEndSound.play().catch(error => {
+        console.error('Initial sound play failed:', error);
+        // Retry once
+        timerEndSound.load();
+        setTimeout(() => {
+            timerEndSound.play().catch(e => 
+                console.error('Retry sound play failed:', e)
+            );
+        }, 100);
+    });
+}
 
-// Call preloadSound when the page loads
-document.addEventListener('DOMContentLoaded', preloadSound);
+// Make sure to initialize the sound when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    loadHabits();
+    preloadSound();
+});

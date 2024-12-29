@@ -18,22 +18,6 @@
             }
         }
         
-        /* Smooth animations */
-        .habit-enter {
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
         /* Custom checkbox styling */
         input[type="checkbox"] {
             position: relative;
@@ -61,6 +45,58 @@
             background-size: contain;
             background-repeat: no-repeat;
         }
+        
+        /* Prevent default form behaviors */
+        form {
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Improve checkbox interaction */
+        input[type="checkbox"] {
+            pointer-events: none; /* Handle clicks through parent element */
+        }
+        
+        /* Add smooth transitions for all interactive elements */
+        .habit-enter * {
+            transition: all 0.2s ease-out;
+        }
+        
+        /* Improve touch feedback */
+        @media (hover: none) {
+            .habit-enter:active {
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Improve button feedback */
+        button:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        
+        /* Add smooth transition for disabled state */
+        button {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        
+        /* Add subtle hover effect to habit cards */
+        .habit-enter {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .habit-enter:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Add loading animation for timer */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .timer-running {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen safe-padding">
@@ -75,7 +111,8 @@
                 <input type="text" 
                        id="habitInput" 
                        placeholder="Add a new habit..." 
-                       class="flex-1 px-4 h-12 rounded-xl focus:outline-none text-base bg-gray-50 border-0 placeholder-gray-400">
+                       class="flex-1 px-4 h-12 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base bg-gray-50 border-0 placeholder-gray-400"
+                       onkeypress="if(event.key === 'Enter') addHabit()">
                 <button onclick="addHabit()" 
                         class="bg-blue-500 text-white w-12 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
