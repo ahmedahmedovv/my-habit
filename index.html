@@ -128,7 +128,11 @@
     <script src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/your-repo-name/sw.js')
+            const swPath = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                ? '/sw.js'
+                : '/my-habit/sw.js';
+            
+            navigator.serviceWorker.register(swPath)
                 .then(reg => console.log('Service Worker registered'))
                 .catch(err => console.log('Service Worker not registered', err));
         }

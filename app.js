@@ -4,6 +4,23 @@ let habits = [];
 function loadHabits() {
     const savedHabits = localStorage.getItem('habits');
     habits = savedHabits ? JSON.parse(savedHabits) : [];
+    
+    // Check and reset completed status for new day
+    const today = new Date().toISOString().split('T')[0];
+    let hasChanges = false;
+    
+    habits.forEach(habit => {
+        if (habit.date !== today) {
+            habit.date = today;
+            habit.completed = false;
+            hasChanges = true;
+        }
+    });
+
+    if (hasChanges) {
+        saveHabits();
+    }
+    
     displayHabits();
 }
 

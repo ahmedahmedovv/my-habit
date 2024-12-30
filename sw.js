@@ -1,5 +1,8 @@
-// Add your repository name if using GitHub Pages
-const BASE_PATH = '/my-habit'; // Replace with your actual repository name
+// Make BASE_PATH dynamic based on environment
+const BASE_PATH = location.hostname === 'localhost' || location.hostname === '127.0.0.1' 
+    ? '' 
+    : '/my-habit';
+
 const CACHE_NAME = 'habit-tracker-v1';
 const ASSETS_TO_CACHE = [
     BASE_PATH + '/',
